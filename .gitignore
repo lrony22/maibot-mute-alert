@@ -1,0 +1,11 @@
+/config.toml
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+
+# 本地资料不进入公开仓库。
+/INSTALLATION.md
+/RELEASE.md
+/tests/
+reasoning-planner-*.json
