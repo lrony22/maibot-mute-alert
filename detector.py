@@ -4,6 +4,7 @@
 """
 
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 
 
@@ -18,6 +19,7 @@ class MuteEvent:
         duration: int,
         is_ban: bool,
         is_all: bool,
+        timestamp: Optional[float] = None,
     ):
         self.group_id = group_id
         self.operator_id = operator_id
@@ -25,7 +27,7 @@ class MuteEvent:
         self.duration = duration
         self.is_ban = is_ban
         self.is_all = is_all
-        self.timestamp = time.time()
+        self.timestamp = time.time() if timestamp is None else timestamp
 
     def __repr__(self) -> str:
         action = "禁言" if self.is_ban else "解禁"
@@ -41,6 +43,18 @@ def _safe_int(val: Any, default: int = 0) -> int:
         return int(val)
     except (ValueError, TypeError):
         return default
+
+
+def _event_timestamp(value: Any) -> Optional[float]:
+    """优先使用通知时间；缺失或不可表示时使用本地接收时间。"""
+    try:
+        timestamp = float(value)
+        if timestamp > 0:
+            datetime.fromtimestamp(timestamp, timezone(timedelta(hours=8)))
+            return timestamp
+    except (ValueError, TypeError, OverflowError, OSError):
+        pass
+    return None
 
 
 def parse_mute_event(
@@ -125,4 +139,5 @@ def parse_mute_event(
         duration=duration,
         is_ban=is_ban,
         is_all=is_all,
+        timestamp=_event_timestamp(raw.get("time")),
     )

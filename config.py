@@ -36,15 +36,17 @@ class MuteAlertConfig(PluginConfigBase):
     __ui_label__ = "禁言告警"
 
     enabled: bool = Field(True, description="是否启用插件")
-    config_version: str = Field("1.1.0", description="配置版本")
+    config_version: str = Field("1.2.0", description="配置版本")
     bot_qq: int = Field(0, ge=0, description="机器人QQ号，0 表示从通知 self_id 自动识别")
     target_groups: List[int] = Field(default_factory=list, description="接收告警的群号列表")
     target_users: List[int] = Field(default_factory=list, description="接收告警的管理员QQ号列表")
     alert_on_all_mute: bool = Field(True, description="是否推送全员禁言通知")
     alert_on_unmute: bool = Field(True, description="是否推送解禁通知")
     cooldown_seconds: int = Field(10, ge=0, description="同一群同类告警冷却秒数")
+    retry_attempts: int = Field(2, ge=0, le=2, description="明确失败后的追加重试次数，依次等待3秒、10秒")
+    delivery_timeout_seconds: int = Field(10, gt=0, description="单次目标投递尝试的超时秒数，包含会话查询")
     ai_notify_admins: bool = Field(False, description="向管理员私聊提交AI主动回复任务，替代固定文本告警")
-    ai_fallback_to_text: bool = Field(True, description="AI任务提交失败时发送固定告警；不检测入队后的生成或投递失败")
+    ai_fallback_to_text: bool = Field(True, description="AI任务明确提交失败时发送固定告警；超时或结果未知不补发")
     ai_instruction: str = Field(
         "请结合当前管理员私聊的关系、记忆和你的人设，用第一人称自然地向管理员说说这件事。"
         "简短回复一条，说明发生在哪个群、禁言或解禁状态及已知时长。"

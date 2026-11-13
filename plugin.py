@@ -28,6 +28,8 @@ class MuteAlertPlugin(MaiBotPlugin):
 
     async def on_load(self) -> None:
         """插件加载时的初始化逻辑"""
+        if self.notifier:
+            await self.notifier.close()
         settings = self.config.plugin
         self.notifier = MuteNotifier(settings, self.ctx)
         
@@ -41,6 +43,9 @@ class MuteAlertPlugin(MaiBotPlugin):
 
     async def on_unload(self) -> None:
         """插件卸载清理逻辑"""
+        if self.notifier:
+            await self.notifier.close()
+            self.notifier = None
         logger.info("【被禁言告警插件】已安全卸载")
 
     async def on_config_update(
@@ -50,7 +55,7 @@ class MuteAlertPlugin(MaiBotPlugin):
         if scope == CONFIG_RELOAD_SCOPE_SELF:
             # Runner 在回调前已完成配置注入，避免覆盖 SDK 的只读 config 属性。
             if self.notifier:
-                self.notifier.config = self.config.plugin
+                self.notifier.update_config(self.config.plugin)
             logger.info(f"【被禁言告警插件】配置已动态重载 (版本: {version})")
 
     @HookHandler(
@@ -62,10 +67,8 @@ class MuteAlertPlugin(MaiBotPlugin):
     )
     async def handle_mute_event(self, **kwargs) -> None:
         """处理入站事件，检测是否有群禁言事件"""
-        if not self.config.plugin.enabled:
+        if not self.config.plugin.enabled or not self.notifier:
             return
-        if not self.notifier:
-            self.notifier = MuteNotifier(self.config.plugin, self.ctx)
 
         configured_bot_qq = self.config.plugin.bot_qq
 
@@ -79,8 +82,8 @@ class MuteAlertPlugin(MaiBotPlugin):
             f"操作者 {event.operator_id}, 时长 {event.duration}s, 全员={event.is_all}"
         )
 
-        # 触发告警推送
-        await self.notifier.dispatch_alert(event)
+        # Hook 只提交任务；网络等待和有限重试由 notifier 管理。
+        self.notifier.submit(event)
 
 
 def create_plugin() -> MuteAlertPlugin:
